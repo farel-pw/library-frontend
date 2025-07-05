@@ -18,63 +18,101 @@ export async function apiCall(endpoint: string, options: RequestInit = {}) {
     throw new Error(`HTTP error! status: ${response.status}`)
   }
 
-  return response.json()
+  const data = await response.json()
+  
+  // Gestion moderne des erreurs du backend
+  if (data.error) {
+    throw new Error(data.message || "Erreur du serveur")
+  }
+
+  return data
 }
 
 export const api = {
   // Livres
-  getLivres: (filters?: { titre?: string; auteur?: string; genre?: string }) => {
+  getLivres: async (filters?: { titre?: string; auteur?: string; genre?: string }) => {
     const params = new URLSearchParams()
     if (filters?.titre) params.append("titre", filters.titre)
     if (filters?.auteur) params.append("auteur", filters.auteur)
-    if (filters?.genre) params.append("genre", filters.genre)
+    if (filters?.genre && filters.genre !== "all") params.append("genre", filters.genre)
 
-    return apiCall(`/livres?${params.toString()}`)
+    const response = await apiCall(`/livres?${params.toString()}`)
+    return response.data || []
   },
 
   // Emprunts
-  getEmprunts: () => apiCall("/emprunts"),
-  emprunterLivre: (livreId: number) =>
-    apiCall("/emprunts", {
+  getEmprunts: async () => {
+    const response = await apiCall("/emprunts")
+    return response.data || []
+  },
+  emprunterLivre: async (livreId: number) => {
+    const response = await apiCall("/emprunts", {
       method: "POST",
       body: JSON.stringify({ livre_id: livreId }),
-    }),
-  retournerLivre: (empruntId: number) =>
-    apiCall("/retours", {
+    })
+    return response
+  },
+  retournerLivre: async (empruntId: number) => {
+    const response = await apiCall("/retours", {
       method: "POST",
       body: JSON.stringify({ emprunt_id: empruntId }),
-    }),
+    })
+    return response
+  },
 
   // Admin - Livres
   admin: {
-    getLivres: () => apiCall("/admin/livres"),
-    ajouterLivre: (livre: any) =>
-      apiCall("/admin/livres", {
+    getLivres: async () => {
+      const response = await apiCall("/admin/livres")
+      return response.data || []
+    },
+    ajouterLivre: async (livre: any) => {
+      const response = await apiCall("/admin/livres", {
         method: "POST",
         body: JSON.stringify(livre),
-      }),
-    modifierLivre: (id: number, livre: any) =>
-      apiCall(`/admin/livres/${id}`, {
+      })
+      return response
+    },
+    modifierLivre: async (id: number, livre: any) => {
+      const response = await apiCall(`/admin/livres/${id}`, {
         method: "PUT",
         body: JSON.stringify(livre),
-      }),
-    supprimerLivre: (id: number) => apiCall(`/admin/livres/${id}`, { method: "DELETE" }),
+      })
+      return response
+    },
+    supprimerLivre: async (id: number) => {
+      const response = await apiCall(`/admin/livres/${id}`, { method: "DELETE" })
+      return response
+    },
 
     // Étudiants
-    getEtudiants: () => apiCall("/admin/etudiants"),
-    modifierEtudiant: (id: number, data: any) =>
-      apiCall(`/admin/etudiants/${id}`, {
+    getEtudiants: async () => {
+      const response = await apiCall("/admin/etudiants")
+      return response.data || []
+    },
+    modifierEtudiant: async (id: number, data: any) => {
+      const response = await apiCall(`/admin/etudiants/${id}`, {
         method: "PUT",
         body: JSON.stringify(data),
-      }),
-    supprimerEtudiant: (id: number) => apiCall(`/admin/etudiants/${id}`, { method: "DELETE" }),
+      })
+      return response
+    },
+    supprimerEtudiant: async (id: number) => {
+      const response = await apiCall(`/admin/etudiants/${id}`, { method: "DELETE" })
+      return response
+    },
   },
 
   // Commentaires
-  getCommentaires: (livreId: number) => apiCall(`/commentaires/${livreId}`),
-  ajouterCommentaire: (commentaire: any) =>
-    apiCall("/commentaires", {
+  getCommentaires: async (livreId: number) => {
+    const response = await apiCall(`/commentaires/${livreId}`)
+    return response.data || []
+  },
+  ajouterCommentaire: async (commentaire: any) => {
+    const response = await apiCall("/commentaires", {
       method: "POST",
       body: JSON.stringify(commentaire),
-    }),
+    })
+    return response
+  },
 }

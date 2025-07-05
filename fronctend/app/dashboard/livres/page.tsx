@@ -44,8 +44,9 @@ export default function LivresPage() {
 
   const loadLivres = async () => {
     try {
+      setLoading(true)
       const data = await api.getLivres(filters)
-      setLivres(data)
+      setLivres(Array.isArray(data) ? data : [])
     } catch (error) {
       console.error("Erreur lors du chargement des livres:", error)
       toast({
@@ -53,6 +54,7 @@ export default function LivresPage() {
         description: "Impossible de charger les livres.",
         variant: "destructive",
       })
+      setLivres([]) // Assurer que livres est toujours un tableau
     } finally {
       setLoading(false)
     }
@@ -183,7 +185,27 @@ export default function LivresPage() {
                 </div>
               </div>
               {livre.description && <p className="text-sm text-gray-600 mb-4 line-clamp-3">{livre.description}</p>}
-              <Button onClick={() => api.emprunterLivre(livre.id)} disabled={!livre.disponible} className="w-full">
+              <Button 
+                onClick={async () => {
+                  try {
+                    await api.emprunterLivre(livre.id)
+                    toast({ 
+                      title: "Succès", 
+                      description: "Livre emprunté avec succès!" 
+                    })
+                    loadLivres() // Recharger la liste pour mettre à jour la disponibilité
+                  } catch (error) {
+                    console.error("Erreur lors de l'emprunt:", error)
+                    toast({
+                      title: "Erreur",
+                      description: "Impossible d'emprunter ce livre.",
+                      variant: "destructive",
+                    })
+                  }
+                }} 
+                disabled={!livre.disponible} 
+                className="w-full"
+              >
                 {livre.disponible ? "Emprunter" : "Non disponible"}
               </Button>
             </CardContent>
