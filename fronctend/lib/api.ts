@@ -53,9 +53,8 @@ export const api = {
     return response
   },
   retournerLivre: async (empruntId: number) => {
-    const response = await apiCall("/retours", {
-      method: "POST",
-      body: JSON.stringify({ emprunt_id: empruntId }),
+    const response = await apiCall(`/emprunts/retour/${empruntId}`, {
+      method: "PUT",
     })
     return response
   },

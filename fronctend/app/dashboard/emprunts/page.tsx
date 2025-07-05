@@ -8,6 +8,31 @@ import { Badge } from "@/components/ui/badge"
 import { Calendar, BookOpen, Clock, CheckCircle, AlertCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
+// Fonction pour associer les livres aux images disponibles
+const getImageForBook = (titre: string, auteur: string): string => {
+  const titreNormalized = titre.toLowerCase()
+  const auteurNormalized = auteur.toLowerCase()
+
+  // Correspondances spécifiques par titre
+  if (titreNormalized.includes("histoire") || titreNormalized.includes("temps")) return "/images/histoire du temps.png"
+  if (titreNormalized.includes("comte") || titreNormalized.includes("monte-cristo")) return "/images/le comte de monte-cristo.png"
+  if (titreNormalized.includes("kant") || titreNormalized.includes("critique")) return "/images/la critique de Kant.png"
+  if (titreNormalized.includes("newton") || titreNormalized.includes("principe")) return "/images/principe newton.png"
+  if (auteurNormalized.includes("victor hugo")) return "/images/victor hugo.png"
+  if (auteurNormalized.includes("yuval noah")) return "/images/yuval noah.png"
+
+  // Images par défaut
+  if (titreNormalized.includes("petit prince")) return "/images/roman.png"
+  if (titreNormalized.includes("1984")) return "/images/science1.png"
+  if (titreNormalized.includes("étranger")) return "/images/la critique de Kant.png"
+  if (titreNormalized.includes("misérables")) return "/images/victor hugo.png"
+  if (titreNormalized.includes("madame bovary")) return "/images/roman1.png"
+  if (titreNormalized.includes("seigneur")) return "/images/Litte.png"
+  if (titreNormalized.includes("harry potter")) return "/images/Litte.png"
+
+  return "/placeholder.jpg"
+}
+
 interface Emprunt {
   id: number
   livre_id: number
@@ -23,6 +48,7 @@ interface Emprunt {
 export default function EmpruntsPage() {
   const [emprunts, setEmprunts] = useState<Emprunt[]>([])
   const [loading, setLoading] = useState(true)
+  const [retourEnCours, setRetourEnCours] = useState<number | null>(null)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -47,6 +73,7 @@ export default function EmpruntsPage() {
 
   const retournerLivre = async (empruntId: number) => {
     try {
+      setRetourEnCours(empruntId)
       await api.retournerLivre(empruntId)
       toast({
         title: "Retour réussi",
@@ -57,9 +84,11 @@ export default function EmpruntsPage() {
       console.error("Erreur lors du retour:", error)
       toast({
         title: "Erreur",
-        description: "Impossible de retourner ce livre.",
+        description: "Impossible de retourner ce livre. Veuillez réessayer.",
         variant: "destructive",
       })
+    } finally {
+      setRetourEnCours(null)
     }
   }
 
@@ -103,6 +132,42 @@ export default function EmpruntsPage() {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("fr-FR")
+  }
+
+  const getJoursRestants = (dateRetourPrevue: string) => {
+    const date = new Date(dateRetourPrevue)
+    const maintenant = new Date()
+    const diffTime = date.getTime() - maintenant.getTime()
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    return diffDays
+  }
+
+  const getMessageJoursRestants = (emprunt: Emprunt) => {
+    if (emprunt.rendu) return null
+    
+    const joursRestants = getJoursRestants(emprunt.date_retour_prevue)
+    
+    if (joursRestants < 0) {
+      return (
+        <span className="text-red-600 font-medium">
+          En retard de {Math.abs(joursRestants)} jour{Math.abs(joursRestants) > 1 ? 's' : ''}
+        </span>
+      )
+    } else if (joursRestants === 0) {
+      return <span className="text-orange-600 font-medium">À retourner aujourd'hui</span>
+    } else if (joursRestants <= 3) {
+      return (
+        <span className="text-orange-600 font-medium">
+          Plus que {joursRestants} jour{joursRestants > 1 ? 's' : ''}
+        </span>
+      )
+    } else {
+      return (
+        <span className="text-green-600">
+          {joursRestants} jour{joursRestants > 1 ? 's' : ''} restant{joursRestants > 1 ? 's' : ''}
+        </span>
+      )
+    }
   }
 
   if (loading) {
@@ -169,9 +234,13 @@ export default function EmpruntsPage() {
               <div className="flex items-start space-x-4">
                 <div className="w-16 h-20 bg-gray-200 rounded flex-shrink-0">
                   <img
-                    src={emprunt.image_url || "/placeholder.svg?height=80&width=64"}
+                    src={getImageForBook(emprunt.titre, emprunt.auteur)}
                     alt={emprunt.titre}
                     className="w-full h-full object-cover rounded"
+                    onError={(e) => {
+                      // Fallback si l'image ne se charge pas
+                      (e.target as HTMLImageElement).src = "/placeholder.jpg"
+                    }}
                   />
                 </div>
 
@@ -196,17 +265,26 @@ export default function EmpruntsPage() {
                       <Clock className="h-4 w-4 mr-2" />
                       <span>À retourner le {formatDate(emprunt.date_retour_prevue)}</span>
                     </div>
-                    {emprunt.date_retour_effective && (
+                    {emprunt.date_retour_effective ? (
                       <div className="flex items-center">
                         <CheckCircle className="h-4 w-4 mr-2" />
                         <span>Retourné le {formatDate(emprunt.date_retour_effective)}</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center">
+                        <Clock className="h-4 w-4 mr-2" />
+                        {getMessageJoursRestants(emprunt)}
                       </div>
                     )}
                   </div>
 
                   {!emprunt.rendu && (
-                    <Button onClick={() => retournerLivre(emprunt.id)} variant="outline">
-                      Retourner le livre
+                    <Button 
+                      onClick={() => retournerLivre(emprunt.id)} 
+                      variant="outline"
+                      disabled={retourEnCours === emprunt.id}
+                    >
+                      {retourEnCours === emprunt.id ? "Retour en cours..." : "Retourner le livre"}
                     </Button>
                   )}
                 </div>

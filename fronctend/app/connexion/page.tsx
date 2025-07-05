@@ -27,7 +27,12 @@ export default function ConnexionPage() {
 
   useEffect(() => {
     if (user && !loading) {
-      router.push("/dashboard/livres")
+      // Redirection basée sur le rôle utilisateur
+      if (user.role === "admin") {
+        router.push("/dashboard/admin/livres")
+      } else {
+        router.push("/dashboard/livres")
+      }
     }
   }, [user, loading, router])
 
@@ -42,6 +47,7 @@ export default function ConnexionPage() {
         title: "Connexion réussie",
         description: "Bienvenue dans votre bibliothèque !",
       })
+      // La redirection se fera automatiquement via useEffect
     } else {
       toast({
         title: "Erreur de connexion",
