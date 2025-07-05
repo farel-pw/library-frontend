@@ -2,6 +2,7 @@
 
 import type React from "react"
 import { createContext, useContext, useState, useEffect } from "react"
+import { getApiUrl, API_CONFIG } from "./api-config"
 
 interface User {
   id: number
@@ -11,11 +12,16 @@ interface User {
   role: "etudiant" | "admin"
 }
 
+interface RegisterResult {
+  success: boolean;
+  error?: string;
+}
+
 interface AuthContextType {
   user: User | null
   token: string | null
   login: (email: string, password: string) => Promise<boolean>
-  register: (userData: RegisterData) => Promise<boolean>
+  register: (userData: RegisterData) => Promise<RegisterResult>
   logout: () => void
   loading: boolean
 }
@@ -24,9 +30,10 @@ interface RegisterData {
   nom: string
   prenom: string
   email: string
-  mot_de_passe: string
+  password: string
   studentId?: string
   department?: string
+  role?: "etudiant" | "admin"
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -50,7 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      const response = await fetch("http://localhost:4001/auth/login", {
+      const response = await fetch(getApiUrl(API_CONFIG.ENDPOINTS.LOGIN), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -73,20 +80,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const register = async (userData: RegisterData): Promise<boolean> => {
+  const register = async (userData: RegisterData): Promise<{ success: boolean; error?: string }> => {
     try {
-      const response = await fetch("http://localhost:4001/auth/register", {
+      const response = await fetch(getApiUrl(API_CONFIG.ENDPOINTS.REGISTER), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(userData),
       })
-
-      return response.ok
-    } catch (error) {
+      
+      const data = await response.json()
+      
+      if (response.ok && !data.error) {
+        return { success: true }
+      } else {
+        const errorMsg = data?.message || "Erreur lors de l'inscription"
+        return { success: false, error: errorMsg }
+      }
+    } catch (error: any) {
       console.error("Erreur d'inscription:", error)
-      return false
+      return { success: false, error: "Impossible de se connecter au serveur" }
     }
   }
 

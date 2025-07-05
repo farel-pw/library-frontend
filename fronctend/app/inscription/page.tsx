@@ -44,7 +44,7 @@ export default function InscriptionPage() {
 
     setIsSubmitting(true)
 
-    const success = await register({
+    const result = await register({
       nom: formData.nom,
       prenom: formData.prenom,
       email: formData.email,
@@ -53,7 +53,7 @@ export default function InscriptionPage() {
       department: formData.department,
     })
 
-    if (success) {
+    if (result.success) {
       toast({
         title: "Inscription réussie",
         description: "Votre compte a été créé avec succès. Vous pouvez maintenant vous connecter.",
@@ -62,7 +62,7 @@ export default function InscriptionPage() {
     } else {
       toast({
         title: "Erreur d'inscription",
-        description: "Une erreur est survenue lors de l'inscription.",
+        description: result.error || "Une erreur est survenue lors de l'inscription.",
         variant: "destructive",
       })
     }
@@ -114,7 +114,7 @@ export default function InscriptionPage() {
                     id="email"
                     name="email"
                     type="email"
-                    placeholder="prenom.nom@universite.fr"
+                    placeholder="email@2ie.edu"
                     value={formData.email}
                     onChange={handleChange}
                     required

@@ -1,4 +1,4 @@
-const API_BASE_URL = "http://localhost:4001"
+import { getApiUrl } from "./api-config"
 
 export async function apiCall(endpoint: string, options: RequestInit = {}) {
   const token = localStorage.getItem("token")
@@ -12,7 +12,7 @@ export async function apiCall(endpoint: string, options: RequestInit = {}) {
     },
   }
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, config)
+  const response = await fetch(getApiUrl(endpoint), config)
 
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`)

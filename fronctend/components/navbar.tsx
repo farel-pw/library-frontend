@@ -32,14 +32,7 @@ export function Navbar() {
                 <Link href="/dashboard/reservations">
                   <Button variant="ghost">Réservations</Button>
                 </Link>
-                {user.role === "admin" && (
-                  <Link href="/dashboard/admin">
-                    <Button variant="ghost">
-                      <Settings className="h-4 w-4 mr-2" />
-                      Admin
-                    </Button>
-                  </Link>
-                )}
+                {/* Lien admin supprimé de la navbar étudiante, interface admin séparée */}
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
