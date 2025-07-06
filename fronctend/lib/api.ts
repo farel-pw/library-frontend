@@ -150,4 +150,25 @@ export const api = {
     const response = await apiCall("/commentaires/bibliotheque/stats")
     return response.data || {}
   },
+
+  // API pour le profil utilisateur
+  getUserEmprunts: async () => {
+    const response = await apiCall("/emprunts")
+    return response.data || []
+  },
+  getUserReservations: async () => {
+    const response = await apiCall("/reservations")
+    return response.data || []
+  },
+  getUserCommentaires: async () => {
+    const response = await apiCall("/commentaires/user")
+    return response.data || []
+  },
+  updateUserProfile: async (userData: any) => {
+    const response = await apiCall("/utilisateurs", {
+      method: "PUT",
+      body: JSON.stringify(userData),
+    })
+    return response
+  },
 }

@@ -203,13 +203,25 @@ export default function LivresPage() {
 
   const loadCommentaires = async (livreId: number) => {
     try {
+      console.log('💬 Chargement des commentaires pour le livre:', livreId)
       const data = await api.getCommentaires(livreId)
+      console.log('💬 Commentaires reçus:', data)
+      
+      // S'assurer que les données sont dans le bon format
+      const commentairesArray = Array.isArray(data) ? data : (data?.data || [])
+      
       setCommentaires(prev => ({
         ...prev,
-        [livreId]: data
+        [livreId]: commentairesArray
       }))
+      
+      console.log('💬 Commentaires mis à jour pour le livre', livreId, ':', commentairesArray.length, 'commentaires')
     } catch (error) {
-      console.error("Erreur lors du chargement des commentaires:", error)
+      console.error("❌ Erreur lors du chargement des commentaires:", error)
+      setCommentaires(prev => ({
+        ...prev,
+        [livreId]: []
+      }))
       toast({
         title: "Erreur",
         description: "Impossible de charger les commentaires.",

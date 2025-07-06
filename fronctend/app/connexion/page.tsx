@@ -31,7 +31,7 @@ export default function ConnexionPage() {
       if (user.role === "admin") {
         router.push("/dashboard/admin/livres")
       } else {
-        router.push("/dashboard/livres")
+        router.push("/dashboard") // Redirection vers la page d'accueil du dashboard
       }
     }
   }, [user, loading, router])
