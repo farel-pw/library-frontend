@@ -243,13 +243,31 @@ export const adminApi = {
   comments: {
     getAll: async () => {
       try {
-        console.log('📝 Admin API - Getting all comments...')
-        const response = await adminApiCall("/commentaires")
+        console.log('📝 Admin API - Getting all comments with details...')
+        const response = await adminApiCall("/commentaires/details")
         console.log('✅ Admin API - Comments response:', response)
         return response.data || []
       } catch (error) {
-        console.error('❌ Admin API - Error getting comments:', error)
-        return []
+        console.error('❌ Admin API - Error getting comments with details:', error)
+        // Fallback vers l'endpoint /all si /details ne fonctionne pas
+        try {
+          console.log('📝 Admin API - Fallback to /commentaires/all...')
+          const response = await adminApiCall("/commentaires/all")
+          console.log('✅ Admin API - Fallback comments response:', response)
+          return response.data || []
+        } catch (fallbackError) {
+          console.error('❌ Admin API - Fallback error:', fallbackError)
+          // En dernier recours, essayer l'endpoint simple
+          try {
+            console.log('📝 Admin API - Final fallback to /commentaires...')
+            const response = await adminApiCall("/commentaires")
+            console.log('✅ Admin API - Final fallback response:', response)
+            return response.data || []
+          } catch (finalError) {
+            console.error('❌ Admin API - Final fallback error:', finalError)
+            return []
+          }
+        }
       }
     },
     getById: async (id: number) => {
@@ -289,9 +307,36 @@ export const adminApi = {
     getStatistics: async (period: string = "30") => {
       try {
         console.log('📊 Admin API - Getting statistics...')
-        const response = await adminApiCall(`/analytics/statistics?period=${period}`)
+        const response = await adminApiCall(`/analytics/dashboard?period=${period}`)
         console.log('✅ Admin API - Statistics response:', response)
-        return response.data || {}
+        
+        // Transformer les données du backend en format attendu par le frontend
+        const rawData = response.data || {}
+        const transformedData = {
+          utilisateurs: {
+            actifs: rawData.utilisateurs_actifs || rawData.total_utilisateurs || 0,
+            nouveaux_ce_mois: rawData.nouveaux_utilisateurs || 0,
+            tendance_utilisateurs: 0 // Calculé côté frontend
+          },
+          emprunts: {
+            en_cours: rawData.emprunts_actifs || 0,
+            en_retard: rawData.emprunts_en_retard || 0,
+            tendance_retards: 0 // Calculé côté frontend
+          },
+          reservations: {
+            en_attente: rawData.reservations_en_attente || 0,
+            pretes: rawData.reservations_pretes || 0,
+            tendance_reservations: 0 // Calculé côté frontend
+          },
+          commentaires: {
+            total: rawData.total_commentaires || 0,
+            note_moyenne: rawData.note_moyenne_generale || 0,
+            tendance_avis: 0 // Calculé côté frontend
+          }
+        }
+        
+        console.log('📊 Transformed analytics data:', transformedData)
+        return transformedData
       } catch (error) {
         console.error('❌ Admin API - Error getting statistics:', error)
         return {}

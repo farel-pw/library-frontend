@@ -127,10 +127,31 @@ export default function AdminCommentsPage() {
   const fetchComments = async () => {
     try {
       setLoading(true)
+      console.log('🔄 Fetching comments...')
       const data = await adminApi.getComments()
-      setComments(Array.isArray(data) ? data : [])
+      console.log('📝 Comments data received:', data)
+      console.log('📝 Comments data type:', typeof data)
+      console.log('📝 Is array?', Array.isArray(data))
+      
+      if (Array.isArray(data)) {
+        setComments(data)
+        console.log('✅ Comments set successfully:', data.length, 'comments')
+      } else {
+        console.warn('⚠️ Comments data is not an array:', data)
+        setComments([])
+        toast({
+          title: "Information",
+          description: "Aucune donnée de commentaire disponible",
+          variant: "default"
+        })
+      }
     } catch (error) {
-      console.error('Erreur lors du chargement des commentaires:', error)
+      console.error('❌ Error loading comments:', error)
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les commentaires",
+        variant: "destructive"
+      })
       setComments([])
     } finally {
       setLoading(false)
@@ -508,6 +529,19 @@ export default function AdminCommentsPage() {
               ))}
             </TableBody>
           </Table>
+
+          {filteredComments.length === 0 && !loading && (
+            <div className="text-center py-8">
+              <MessageSquare className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+              <p className="text-gray-500 text-lg font-medium">Aucun commentaire trouvé</p>
+              <p className="text-sm text-gray-400 mt-2">
+                {comments.length === 0 
+                  ? "Il n'y a encore aucun commentaire dans le système"
+                  : "Modifiez vos filtres pour voir d'autres commentaires"
+                }
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
