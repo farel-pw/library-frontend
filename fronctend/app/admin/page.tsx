@@ -1,6 +1,6 @@
 "use client"
 
-import React from "react"
+import React, { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { 
@@ -13,35 +13,130 @@ import {
   Clock,
   AlertTriangle
 } from "lucide-react"
+import { adminApi } from "@/lib/admin-api"
+
+interface DashboardStats {
+  total_livres: number
+  livres_disponibles: number
+  total_utilisateurs: number
+  utilisateurs_actifs: number
+  nouveaux_utilisateurs: number
+  total_emprunts: number
+  emprunts_actifs: number
+  emprunts_en_retard: number
+  emprunts_semaine: number
+  total_reservations: number
+  reservations_en_attente: number
+  reservations_pretes: number
+  total_commentaires: number
+  commentaires_semaine: number
+  note_moyenne_generale: string
+  total_notifications: number
+  notifications_non_lues: number
+  notifications_retard: number
+  notifications_reservations: number
+}
 
 export default function AdminPage() {
-  const stats = [
+  const [stats, setStats] = useState<DashboardStats | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        setLoading(true)
+        const data = await adminApi.getStats()
+        console.log("📊 Dashboard stats received:", data)
+        setStats(data)
+        setError(null)
+      } catch (err) {
+        console.error("❌ Error fetching dashboard stats:", err)
+        setError(err instanceof Error ? err.message : "Erreur inconnue")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchStats()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-white mb-2">
+            Tableau de bord administrateur
+          </h1>
+          <p className="text-slate-400">Chargement des données...</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i} className="bg-slate-800 border-slate-700 animate-pulse">
+              <CardContent className="p-6">
+                <div className="h-4 bg-slate-700 rounded w-3/4 mb-2"></div>
+                <div className="h-8 bg-slate-700 rounded w-1/2"></div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-white mb-2">
+            Tableau de bord administrateur
+          </h1>
+          <p className="text-red-400">Erreur: {error}</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!stats) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-white mb-2">
+            Tableau de bord administrateur
+          </h1>
+          <p className="text-slate-400">Aucune donnée disponible</p>
+        </div>
+      </div>
+    )
+  }
+
+  const dashboardStats = [
     {
       title: "Utilisateurs totaux",
-      value: "1,234",
+      value: stats.total_utilisateurs.toString(),
       icon: Users,
-      change: "+12%",
+      change: `${stats.nouveaux_utilisateurs} nouveaux`,
       changeType: "positive"
     },
     {
       title: "Livres en stock",
-      value: "5,678",
+      value: stats.total_livres.toString(),
       icon: BookOpen,
-      change: "+5%",
+      change: `${stats.livres_disponibles} disponibles`,
       changeType: "positive"
     },
     {
       title: "Emprunts actifs",
-      value: "234",
+      value: stats.emprunts_actifs.toString(),
       icon: Clock,
-      change: "-8%",
-      changeType: "negative"
+      change: `${stats.emprunts_en_retard} en retard`,
+      changeType: stats.emprunts_en_retard > 0 ? "negative" : "positive"
     },
     {
       title: "Réservations",
-      value: "89",
+      value: stats.total_reservations.toString(),
       icon: Calendar,
-      change: "+15%",
+      change: `${stats.reservations_pretes} prêtes`,
       changeType: "positive"
     }
   ]
@@ -67,7 +162,7 @@ export default function AdminPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => (
+        {dashboardStats.map((stat, index) => (
           <Card key={index} className="bg-slate-800 border-slate-700">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-slate-300">
@@ -80,11 +175,56 @@ export default function AdminPage() {
               <p className={`text-xs ${
                 stat.changeType === 'positive' ? 'text-green-400' : 'text-red-400'
               }`}>
-                {stat.change} par rapport au mois dernier
+                {stat.change}
               </p>
             </CardContent>
           </Card>
         ))}
+      </div>
+
+      {/* Additional Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <Card className="bg-slate-800 border-slate-700">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center space-x-2">
+              <MessageSquare className="h-5 w-5" />
+              <span>Commentaires</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-white">{stats.total_commentaires}</div>
+            <p className="text-xs text-green-400">{stats.commentaires_semaine} cette semaine</p>
+            <p className="text-xs text-slate-400">Note moyenne: {stats.note_moyenne_generale}/5</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-slate-800 border-slate-700">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center space-x-2">
+              <AlertTriangle className="h-5 w-5" />
+              <span>Notifications</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-white">{stats.total_notifications}</div>
+            <p className="text-xs text-red-400">{stats.notifications_retard} retards</p>
+            <p className="text-xs text-blue-400">{stats.notifications_reservations} réservations</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-slate-800 border-slate-700">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center space-x-2">
+              <TrendingUp className="h-5 w-5" />
+              <span>Activité</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-white">{stats.emprunts_semaine}</div>
+            <p className="text-xs text-green-400">Emprunts cette semaine</p>
+            <p className="text-xs text-slate-400">{stats.utilisateurs_actifs} utilisateurs actifs</p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Content Grid */}
