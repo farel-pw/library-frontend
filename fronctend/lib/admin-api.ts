@@ -1,7 +1,10 @@
 import { getApiUrl } from "./api-config"
 
 export async function adminApiCall(endpoint: string, options: RequestInit = {}) {
-  const token = localStorage.getItem("adminToken")
+  const token = localStorage.getItem("adminToken") || localStorage.getItem("token")
+  
+  console.log("🔐 Admin API Call:", endpoint)
+  console.log("🔐 Token found:", token ? "✅ Yes" : "❌ No")
 
   const config: RequestInit = {
     ...options,
@@ -12,15 +15,24 @@ export async function adminApiCall(endpoint: string, options: RequestInit = {}) 
     },
   }
 
+  console.log("📤 Request config:", config)
+
   const response = await fetch(getApiUrl(endpoint), config)
+  
+  console.log("📥 Response status:", response.status)
+  console.log("📥 Response ok:", response.ok)
 
   if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`)
+    const errorText = await response.text()
+    console.error("❌ API Error:", response.status, errorText)
+    throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`)
   }
 
   const data = await response.json()
+  console.log("📊 Response data:", data)
   
   if (data.error) {
+    console.error("❌ API Error from data:", data.message)
     throw new Error(data.message || "Erreur du serveur")
   }
 
@@ -37,29 +49,37 @@ export const adminApi = {
   // Gestion des utilisateurs
   users: {
     getAll: async () => {
-      const response = await adminApiCall("/admin/utilisateurs")
-      return response.data || []
+      const response = await adminApiCall("/utilisateurs")
+      console.log("👥 Users API Response:", response)
+      
+      // Le backend retourne { error: false, data: users }
+      if (response.error === false && response.data) {
+        return response.data
+      }
+      
+      // Fallback si la structure est différente
+      return response.data || response || []
     },
     getById: async (id: number) => {
-      const response = await adminApiCall(`/admin/utilisateurs/${id}`)
-      return response.data
+      const response = await adminApiCall(`/utilisateurs/${id}`)
+      return response.data || response
     },
     create: async (userData: any) => {
-      const response = await adminApiCall("/admin/utilisateurs", {
+      const response = await adminApiCall("/utilisateurs", {
         method: "POST",
         body: JSON.stringify(userData),
       })
       return response
     },
     update: async (id: number, userData: any) => {
-      const response = await adminApiCall(`/admin/utilisateurs/${id}`, {
+      const response = await adminApiCall(`/utilisateurs/${id}`, {
         method: "PUT",
         body: JSON.stringify(userData),
       })
       return response
     },
     delete: async (id: number) => {
-      const response = await adminApiCall(`/admin/utilisateurs/${id}`, {
+      const response = await adminApiCall(`/utilisateurs/${id}`, {
         method: "DELETE",
       })
       return response
