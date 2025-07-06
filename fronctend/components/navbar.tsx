@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useAuth } from "@/lib/auth-context"
 import { Button } from "@/components/ui/button"
-import { BookOpen, User, LogOut, Settings } from "lucide-react"
+import { BookOpen, User, LogOut, Settings, Star } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 export function Navbar() {
@@ -31,6 +31,12 @@ export function Navbar() {
                 </Link>
                 <Link href="/dashboard/reservations">
                   <Button variant="ghost">Réservations</Button>
+                </Link>
+                <Link href="/dashboard/avis">
+                  <Button variant="ghost" className="flex items-center space-x-1">
+                    <Star className="h-4 w-4" />
+                    <span>Avis</span>
+                  </Button>
                 </Link>
                 {/* Lien admin supprimé de la navbar étudiante, interface admin séparée */}
 

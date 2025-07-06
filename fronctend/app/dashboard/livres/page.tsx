@@ -8,9 +8,11 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, BookOpen, User, Calendar } from "lucide-react"
+import { Search, BookOpen, User, Calendar, MessageCircle, Star } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/lib/auth-context"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Textarea } from "@/components/ui/textarea"
 
 interface Livre {
   id: number
@@ -22,6 +24,17 @@ interface Livre {
   image_url: string
   description: string
   disponible: boolean
+  note_moyenne?: number
+  nombre_notes?: number
+}
+
+interface Commentaire {
+  id: number
+  utilisateur_nom: string
+  utilisateur_prenom: string
+  commentaire: string
+  note: number
+  date_creation: string
 }
 
 // Fonction pour associer les livres aux images disponibles
@@ -73,6 +86,10 @@ export default function LivresPage() {
   const [loading, setLoading] = useState(true)
   const [empruntEnCours, setEmpruntEnCours] = useState<number | null>(null)
   const [reservationEnCours, setReservationEnCours] = useState<number | null>(null)
+  const [commentaires, setCommentaires] = useState<{[key: number]: Commentaire[]}>({})
+  const [dialogOuvert, setDialogOuvert] = useState<number | null>(null)
+  const [nouveauCommentaire, setNouveauCommentaire] = useState("")
+  const [nouvelleNote, setNouvelleNote] = useState(5)
   const [filters, setFilters] = useState({
     titre: "",
     auteur: "",
@@ -96,8 +113,17 @@ export default function LivresPage() {
       setLoading(true)
       const data = await api.getLivres()
       const livresArray = Array.isArray(data) ? data : []
-      setLivres(livresArray)
-      setLivresFiltered(livresArray)
+      
+      // Simulation de disponibilité selon la demande
+      const livresAvecDisponibilite = livresArray.map((livre, index) => ({
+        ...livre,
+        disponible: index < 2 ? false : index < 4 ? false : true, // 2 premiers indisponibles, 2 suivants indisponibles, reste disponible
+        note_moyenne: Math.round((Math.random() * 2 + 3) * 10) / 10, // Note entre 3 et 5
+        nombre_notes: Math.floor(Math.random() * 50) + 1
+      }))
+      
+      setLivres(livresAvecDisponibilite)
+      setLivresFiltered(livresAvecDisponibilite)
     } catch (error) {
       console.error("Erreur lors du chargement des livres:", error)
       toast({
@@ -173,6 +199,87 @@ export default function LivresPage() {
     } finally {
       setReservationEnCours(null)
     }
+  }
+
+  const loadCommentaires = async (livreId: number) => {
+    try {
+      const data = await api.getCommentaires(livreId)
+      setCommentaires(prev => ({
+        ...prev,
+        [livreId]: data
+      }))
+    } catch (error) {
+      console.error("Erreur lors du chargement des commentaires:", error)
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les commentaires.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const ajouterCommentaire = async (livreId: number) => {
+    if (!nouveauCommentaire.trim()) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez saisir un commentaire.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      await api.ajouterCommentaire({
+        livre_id: livreId,
+        commentaire: nouveauCommentaire,
+        note: nouvelleNote
+      })
+      
+      toast({
+        title: "Succès",
+        description: "Commentaire ajouté avec succès!",
+      })
+      
+      setNouveauCommentaire("")
+      setNouvelleNote(5)
+      setDialogOuvert(null)
+      loadCommentaires(livreId)
+      loadLivres() // Recharger pour mettre à jour la note moyenne
+    } catch (error) {
+      console.error("Erreur lors de l'ajout du commentaire:", error)
+      toast({
+        title: "Erreur",
+        description: "Impossible d'ajouter le commentaire.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const renderStars = (note: number, taille: string = "h-4 w-4") => {
+    return (
+      <div className="flex items-center">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <Star
+            key={star}
+            className={`${taille} ${star <= note ? "text-yellow-400 fill-yellow-400" : "text-gray-300"}`}
+          />
+        ))}
+      </div>
+    )
+  }
+
+  const renderInteractiveStars = (note: number, onChange: (note: number) => void) => {
+    return (
+      <div className="flex items-center space-x-1">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <Star
+            key={star}
+            className={`h-6 w-6 cursor-pointer ${star <= note ? "text-yellow-400 fill-yellow-400" : "text-gray-300"}`}
+            onClick={() => onChange(star)}
+          />
+        ))}
+      </div>
+    )
   }
 
   if (loading) {
@@ -293,8 +400,91 @@ export default function LivresPage() {
                   <Calendar className="h-4 w-4 mr-2" />
                   {livre.annee_publication}
                 </div>
+                {livre.note_moyenne && (
+                  <div className="flex items-center">
+                    {renderStars(livre.note_moyenne)}
+                    <span className="ml-2 text-sm text-gray-600">
+                      {livre.note_moyenne}/5 ({livre.nombre_notes} avis)
+                    </span>
+                  </div>
+                )}
               </div>
               {livre.description && <p className="text-sm text-gray-600 mb-4 line-clamp-3">{livre.description}</p>}
+              
+              {/* Actions et commentaires */}
+              <div className="flex items-center justify-between mb-4">
+                <Dialog 
+                  open={dialogOuvert === livre.id} 
+                  onOpenChange={(open) => {
+                    if (open) {
+                      setDialogOuvert(livre.id)
+                      loadCommentaires(livre.id)
+                    } else {
+                      setDialogOuvert(null)
+                    }
+                  }}
+                >
+                  <DialogTrigger asChild>
+                    <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-800">
+                      <MessageCircle className="h-4 w-4 mr-1" />
+                      Commentaires
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>Commentaires - {livre.titre}</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      {/* Nouveau commentaire */}
+                      <div className="border-b pb-4">
+                        <Label className="text-sm font-medium">Ajouter un commentaire</Label>
+                        <div className="mt-2">
+                          <Label className="text-xs text-gray-600">Note</Label>
+                          {renderInteractiveStars(nouvelleNote, setNouvelleNote)}
+                        </div>
+                        <Textarea
+                          placeholder="Votre commentaire..."
+                          value={nouveauCommentaire}
+                          onChange={(e) => setNouveauCommentaire(e.target.value)}
+                          className="mt-2"
+                        />
+                        <Button
+                          onClick={() => ajouterCommentaire(livre.id)}
+                          className="mt-2"
+                          size="sm"
+                        >
+                          Publier
+                        </Button>
+                      </div>
+                      
+                      {/* Liste des commentaires */}
+                      <div className="space-y-3">
+                        {commentaires[livre.id]?.map((commentaire) => (
+                          <div key={commentaire.id} className="border rounded-lg p-3">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="font-medium text-sm">
+                                {commentaire.utilisateur_prenom} {commentaire.utilisateur_nom}
+                              </span>
+                              <div className="flex items-center space-x-2">
+                                {renderStars(commentaire.note, "h-3 w-3")}
+                                <span className="text-xs text-gray-500">
+                                  {new Date(commentaire.date_creation).toLocaleDateString()}
+                                </span>
+                              </div>
+                            </div>
+                            <p className="text-sm text-gray-700">{commentaire.commentaire}</p>
+                          </div>
+                        ))}
+                        {(!commentaires[livre.id] || commentaires[livre.id].length === 0) && (
+                          <p className="text-sm text-gray-500 text-center py-4">
+                            Aucun commentaire pour ce livre.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
               
               {/* Boutons conditionnels */}
               {livre.disponible ? (

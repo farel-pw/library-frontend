@@ -123,7 +123,7 @@ export const api = {
 
   // Commentaires
   getCommentaires: async (livreId: number) => {
-    const response = await apiCall(`/commentaires/${livreId}`)
+    const response = await apiCall(`/commentaires/livre/${livreId}`)
     return response.data || []
   },
   ajouterCommentaire: async (commentaire: any) => {
@@ -132,5 +132,22 @@ export const api = {
       body: JSON.stringify(commentaire),
     })
     return response
+  },
+
+  // Commentaires Bibliothèque
+  getBibliothequeCommentaires: async () => {
+    const response = await apiCall("/commentaires/bibliotheque")
+    return response.data || []
+  },
+  ajouterBibliothequeCommentaire: async (commentaire: any) => {
+    const response = await apiCall("/commentaires/bibliotheque", {
+      method: "POST",
+      body: JSON.stringify(commentaire),
+    })
+    return response
+  },
+  getBibliothequeStats: async () => {
+    const response = await apiCall("/commentaires/bibliotheque/stats")
+    return response.data || {}
   },
 }
