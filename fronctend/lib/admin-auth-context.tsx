@@ -47,23 +47,34 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (credentials: any): Promise<boolean> => {
     try {
-      const response = await fetch("/api/auth/admin/login", {
+      // Utiliser l'endpoint correct du backend
+      const response = await fetch("http://localhost:4401/userlogin", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(credentials),
+        body: JSON.stringify({
+          email: credentials.email,
+          password: credentials.password, // Le backend attend 'password', pas 'mot_de_passe'
+        }),
       })
 
       const data = await response.json()
 
-      if (response.ok) {
-        setAdminUser(data.user)
-        setAdminToken(data.token)
-        localStorage.setItem("adminToken", data.token)
-        localStorage.setItem("adminUser", JSON.stringify(data.user))
-        return true
+      if (response.ok && !data.error) {
+        // Vérifier que l'utilisateur est bien admin
+        if (data.user && data.user.role === 'admin') {
+          setAdminUser(data.user)
+          setAdminToken(data.token)
+          localStorage.setItem("adminToken", data.token)
+          localStorage.setItem("adminUser", JSON.stringify(data.user))
+          return true
+        } else {
+          console.error("Accès refusé: rôle administrateur requis")
+          return false
+        }
       }
+      console.error("Erreur de connexion:", data.message || "Échec de la connexion")
       return false
     } catch (error) {
       console.error("Erreur lors de la connexion admin:", error)

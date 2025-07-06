@@ -97,16 +97,58 @@ export default function AdminAnalyticsPage() {
     try {
       setLoading(true)
       const [stats, charts, activity] = await Promise.all([
-        adminApi.getStatistics(period),
-        adminApi.getChartData(period),
-        adminApi.getActivityData(period)
+        adminApi.getStatistics(period).catch(err => {
+          console.error('Erreur stats:', err)
+          return {}
+        }),
+        adminApi.getChartData(period).catch(err => {
+          console.error('Erreur charts:', err)
+          return {}
+        }),
+        adminApi.getActivityData(period).catch(err => {
+          console.error('Erreur activity:', err)
+          return {}
+        })
       ])
       
-      setStatistics(stats)
-      setChartData(charts)
-      setActivityData(activity)
+      // Données par défaut si les endpoints ne fonctionnent pas encore
+      setStatistics(stats || {
+        utilisateurs: { actifs: 0, nouveaux_ce_mois: 0, tendance_utilisateurs: 0 },
+        emprunts: { en_cours: 0, en_retard: 0, tendance_retards: 0 },
+        reservations: { en_attente: 0, pretes: 0, tendance_reservations: 0 },
+        commentaires: { total: 0, note_moyenne: 0, tendance_avis: 0 }
+      })
+      
+      setChartData(charts || {
+        livres_populaires: [],
+        genres_populaires: [],
+        emprunts_par_mois: [],
+        reservations_par_mois: [],
+        utilisateurs_par_mois: []
+      })
+      
+      setActivityData(activity || {
+        activites_recentes: []
+      })
     } catch (error) {
       console.error('Erreur lors du chargement des analytics:', error)
+      // Données par défaut en cas d'erreur
+      setStatistics({
+        utilisateurs: { actifs: 0, nouveaux_ce_mois: 0, tendance_utilisateurs: 0 },
+        emprunts: { en_cours: 0, en_retard: 0, tendance_retards: 0 },
+        reservations: { en_attente: 0, pretes: 0, tendance_reservations: 0 },
+        commentaires: { total: 0, note_moyenne: 0, tendance_avis: 0 }
+      })
+      setChartData({
+        livres_populaires: [],
+        genres_populaires: [],
+        emprunts_par_mois: [],
+        reservations_par_mois: [],
+        utilisateurs_par_mois: []
+      })
+      setActivityData({
+        activites_recentes: []
+      })
     } finally {
       setLoading(false)
     }
@@ -220,14 +262,16 @@ export default function AdminAnalyticsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Utilisateurs actifs</p>
-                  <p className="text-2xl font-bold text-gray-900">{statistics.utilisateurs.actifs}</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {statistics.utilisateurs?.actifs || 0}
+                  </p>
                   <p className="text-xs text-gray-500">
-                    {statistics.utilisateurs.nouveaux_ce_mois} nouveaux ce mois
+                    {statistics.utilisateurs?.nouveaux_ce_mois || 0} nouveaux ce mois
                   </p>
                 </div>
                 <div className="text-right">
                   <Users className="h-8 w-8 text-blue-600 mb-2" />
-                  {getTrendBadge(statistics.utilisateurs.tendance_utilisateurs)}
+                  {getTrendBadge(statistics.utilisateurs?.tendance_utilisateurs || 0)}
                 </div>
               </div>
             </CardContent>
@@ -238,14 +282,16 @@ export default function AdminAnalyticsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Emprunts en cours</p>
-                  <p className="text-2xl font-bold text-gray-900">{statistics.emprunts.en_cours}</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {statistics.emprunts?.en_cours || 0}
+                  </p>
                   <p className="text-xs text-gray-500">
-                    {statistics.emprunts.en_retard} en retard
+                    {statistics.emprunts?.en_retard || 0} en retard
                   </p>
                 </div>
                 <div className="text-right">
                   <BookOpen className="h-8 w-8 text-green-600 mb-2" />
-                  {getTrendBadge(statistics.emprunts.tendance_retards)}
+                  {getTrendBadge(statistics.emprunts?.tendance_retards || 0)}
                 </div>
               </div>
             </CardContent>
@@ -256,14 +302,16 @@ export default function AdminAnalyticsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Réservations</p>
-                  <p className="text-2xl font-bold text-gray-900">{statistics.reservations.en_attente}</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {statistics.reservations?.en_attente || 0}
+                  </p>
                   <p className="text-xs text-gray-500">
-                    {statistics.reservations.pretes} prêtes
+                    {statistics.reservations?.pretes || 0} prêtes
                   </p>
                 </div>
                 <div className="text-right">
                   <Clock className="h-8 w-8 text-yellow-600 mb-2" />
-                  {getTrendBadge(statistics.reservations.tendance_reservations)}
+                  {getTrendBadge(statistics.reservations?.tendance_reservations || 0)}
                 </div>
               </div>
             </CardContent>
@@ -275,15 +323,15 @@ export default function AdminAnalyticsPage() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Note moyenne</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {statistics.commentaires.note_moyenne?.toFixed(1) || 'N/A'}
+                    {statistics.commentaires?.note_moyenne?.toFixed(1) || 'N/A'}
                   </p>
                   <p className="text-xs text-gray-500">
-                    {statistics.commentaires.total} avis
+                    {statistics.commentaires?.total || 0} avis
                   </p>
                 </div>
                 <div className="text-right">
                   <Star className="h-8 w-8 text-purple-600 mb-2" />
-                  {getTrendBadge(statistics.commentaires.tendance_avis)}
+                  {getTrendBadge(statistics.commentaires?.tendance_avis || 0)}
                 </div>
               </div>
             </CardContent>
@@ -291,10 +339,32 @@ export default function AdminAnalyticsPage() {
         </div>
       )}
 
+      {/* Message informatif si pas de données */}
+      {(!chartData?.livres_populaires?.length && !chartData?.genres_populaires?.length && !activityData?.activites_recentes?.length) && (
+        <Card className="border-blue-200 bg-blue-50">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-center">
+              <div className="text-center">
+                <BarChart3 className="h-12 w-12 mx-auto text-blue-600 mb-4" />
+                <h3 className="text-lg font-semibold text-blue-900 mb-2">Analytics en développement</h3>
+                <p className="text-blue-700 mb-4">
+                  Les endpoints d'analytics ne sont pas encore implémentés côté backend.
+                  Les statistiques de base sont affichées, mais les graphiques détaillés seront disponibles prochainement.
+                </p>
+                <Button onClick={fetchAnalytics} variant="outline" className="border-blue-300 text-blue-700 hover:bg-blue-100">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Réessayer
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Graphiques et tableaux */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Livres populaires */}
-        {chartData && (
+        {chartData && chartData.livres_populaires && (
           <Card>
             <CardHeader>
               <CardTitle>Livres les plus empruntés</CardTitle>
@@ -327,7 +397,7 @@ export default function AdminAnalyticsPage() {
         )}
 
         {/* Genres populaires */}
-        {chartData && (
+        {chartData && chartData.genres_populaires && (
           <Card>
             <CardHeader>
               <CardTitle>Genres les plus demandés</CardTitle>
@@ -364,100 +434,101 @@ export default function AdminAnalyticsPage() {
 
       {/* Évolution temporelle */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {chartData && (
-          <>
-            <Card>
-              <CardHeader>
-                <CardTitle>Emprunts par mois</CardTitle>
-                <CardDescription>
-                  Évolution des emprunts sur la période
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {chartData.emprunts_par_mois.map((item, index) => (
-                    <div key={index} className="flex items-center justify-between">
-                      <span className="text-sm font-medium">{item.mois}</span>
-                      <div className="flex items-center space-x-2">
-                        <div className="w-20 h-2 bg-gray-200 rounded-full">
-                          <div 
-                            className="h-2 bg-green-600 rounded-full"
-                            style={{ 
-                              width: `${(item.nombre / Math.max(...chartData.emprunts_par_mois.map(e => e.nombre))) * 100}%` 
-                            }}
-                          ></div>
-                        </div>
-                        <span className="text-sm font-bold">{item.nombre}</span>
+        {chartData && chartData.emprunts_par_mois && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Emprunts par mois</CardTitle>
+              <CardDescription>
+                Évolution des emprunts sur la période
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {chartData.emprunts_par_mois.map((item, index) => (
+                  <div key={index} className="flex items-center justify-between">
+                    <span className="text-sm font-medium">{item.mois}</span>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-20 h-2 bg-gray-200 rounded-full">
+                        <div 
+                          className="h-2 bg-green-600 rounded-full"
+                          style={{ 
+                            width: `${chartData.emprunts_par_mois.length > 0 ? (item.nombre / Math.max(...chartData.emprunts_par_mois.map(e => e.nombre))) * 100 : 0}%` 
+                          }}
+                        ></div>
                       </div>
+                      <span className="text-sm font-bold">{item.nombre}</span>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Réservations par mois</CardTitle>
-                <CardDescription>
-                  Évolution des réservations sur la période
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {chartData.reservations_par_mois.map((item, index) => (
-                    <div key={index} className="flex items-center justify-between">
-                      <span className="text-sm font-medium">{item.mois}</span>
-                      <div className="flex items-center space-x-2">
-                        <div className="w-20 h-2 bg-gray-200 rounded-full">
-                          <div 
-                            className="h-2 bg-yellow-600 rounded-full"
-                            style={{ 
-                              width: `${(item.nombre / Math.max(...chartData.reservations_par_mois.map(r => r.nombre))) * 100}%` 
-                            }}
-                          ></div>
-                        </div>
-                        <span className="text-sm font-bold">{item.nombre}</span>
+        {chartData && chartData.reservations_par_mois && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Réservations par mois</CardTitle>
+              <CardDescription>
+                Évolution des réservations sur la période
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {chartData.reservations_par_mois.map((item, index) => (
+                  <div key={index} className="flex items-center justify-between">
+                    <span className="text-sm font-medium">{item.mois}</span>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-20 h-2 bg-gray-200 rounded-full">
+                        <div 
+                          className="h-2 bg-yellow-600 rounded-full"
+                          style={{ 
+                            width: `${chartData.reservations_par_mois.length > 0 ? (item.nombre / Math.max(...chartData.reservations_par_mois.map(r => r.nombre))) * 100 : 0}%` 
+                          }}
+                        ></div>
                       </div>
+                      <span className="text-sm font-bold">{item.nombre}</span>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Nouveaux utilisateurs</CardTitle>
-                <CardDescription>
-                  Évolution des inscriptions par mois
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {chartData.utilisateurs_par_mois.map((item, index) => (
-                    <div key={index} className="flex items-center justify-between">
-                      <span className="text-sm font-medium">{item.mois}</span>
-                      <div className="flex items-center space-x-2">
-                        <div className="w-20 h-2 bg-gray-200 rounded-full">
-                          <div 
-                            className="h-2 bg-blue-600 rounded-full"
-                            style={{ 
-                              width: `${(item.nombre / Math.max(...chartData.utilisateurs_par_mois.map(u => u.nombre))) * 100}%` 
-                            }}
-                          ></div>
-                        </div>
-                        <span className="text-sm font-bold">{item.nombre}</span>
+        {chartData && chartData.utilisateurs_par_mois && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Nouveaux utilisateurs</CardTitle>
+              <CardDescription>
+                Évolution des inscriptions par mois
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {chartData.utilisateurs_par_mois.map((item, index) => (
+                  <div key={index} className="flex items-center justify-between">
+                    <span className="text-sm font-medium">{item.mois}</span>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-20 h-2 bg-gray-200 rounded-full">
+                        <div 
+                          className="h-2 bg-blue-600 rounded-full"
+                          style={{ 
+                            width: `${chartData.utilisateurs_par_mois.length > 0 ? (item.nombre / Math.max(...chartData.utilisateurs_par_mois.map(u => u.nombre))) * 100 : 0}%`                          }}
+                        ></div>
                       </div>
+                      <span className="text-sm font-bold">{item.nombre}</span>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         )}
       </div>
 
       {/* Activité récente */}
-      {activityData && (
+      {activityData && activityData.activites_recentes && (
         <Card>
           <CardHeader>
             <CardTitle>Activité récente</CardTitle>

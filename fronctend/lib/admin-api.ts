@@ -33,7 +33,7 @@ export async function adminApiCall(endpoint: string, options: RequestInit = {}) 
 export const adminApi = {
   // Statistiques générales
   getStats: async () => {
-    const response = await adminApiCall("/admin/stats")
+    const response = await adminApiCall("/analytics/dashboard")
     return response.data || {}
   },
 
@@ -181,56 +181,152 @@ export const adminApi = {
   // Gestion des réservations
   reservations: {
     getAll: async () => {
-      const response = await adminApiCall("/admin/reservations")
-      return response.data || []
+      try {
+        console.log('🔍 Admin API - Getting all reservations...')
+        const response = await adminApiCall("/reservations/details")
+        console.log('✅ Admin API - Reservations response:', response)
+        return response.data || []
+      } catch (error) {
+        console.error('❌ Admin API - Error getting reservations:', error)
+        return []
+      }
     },
-    getById: async (id: number) => {
-      const response = await adminApiCall(`/admin/reservations/${id}`)
+    getById: async (id: number | string) => {
+      const response = await adminApiCall(`/reservations/${id}`)
       return response.data
     },
-    approve: async (id: number) => {
-      const response = await adminApiCall(`/admin/reservations/${id}/approve`, {
+    approve: async (id: number | string, data?: any) => {
+      const response = await adminApiCall(`/reservations/${id}/approve`, {
         method: "PUT",
+        body: JSON.stringify(data || {}),
       })
       return response
     },
-    reject: async (id: number, reason?: string) => {
-      const response = await adminApiCall(`/admin/reservations/${id}/reject`, {
+    cancel: async (id: number | string, data?: any) => {
+      const response = await adminApiCall(`/reservations/${id}/reject`, {
         method: "PUT",
-        body: JSON.stringify({ reason }),
+        body: JSON.stringify(data || {}),
       })
       return response
     },
-    delete: async (id: number) => {
-      const response = await adminApiCall(`/admin/reservations/${id}`, {
+    notify: async (id: number | string) => {
+      // TODO: Implémenter l'endpoint de notification côté backend
+      console.warn('Notification endpoint not implemented yet')
+      return { success: false, message: 'Fonctionnalité de notification non disponible' }
+    },
+    delete: async (id: number | string) => {
+      const response = await adminApiCall(`/reservations/${id}`, {
         method: "DELETE",
       })
       return response
     },
   },
 
+  // Méthodes de compatibilité pour les réservations
+  getReservations: async () => {
+    return adminApi.reservations.getAll()
+  },
+  
+  approveReservation: async (id: string | number, data?: any) => {
+    return adminApi.reservations.approve(id, data)
+  },
+  
+  cancelReservation: async (id: string | number, data?: any) => {
+    return adminApi.reservations.cancel(id, data)
+  },
+  
+  notifyReservation: async (id: string | number) => {
+    return adminApi.reservations.notify(id)
+  },
+
   // Gestion des commentaires
   comments: {
     getAll: async () => {
-      const response = await adminApiCall("/admin/commentaires")
-      return response.data || []
+      try {
+        console.log('📝 Admin API - Getting all comments...')
+        const response = await adminApiCall("/commentaires")
+        console.log('✅ Admin API - Comments response:', response)
+        return response.data || []
+      } catch (error) {
+        console.error('❌ Admin API - Error getting comments:', error)
+        return []
+      }
     },
     getById: async (id: number) => {
-      const response = await adminApiCall(`/admin/commentaires/${id}`)
+      const response = await adminApiCall(`/commentaires/${id}`)
       return response.data
     },
-    moderate: async (id: number, action: 'approve' | 'reject') => {
-      const response = await adminApiCall(`/admin/commentaires/${id}/moderate`, {
+    moderate: async (id: number, action: 'approve' | 'reject', motif?: string) => {
+      const response = await adminApiCall(`/commentaires/${id}/moderate`, {
         method: "PUT",
-        body: JSON.stringify({ action }),
+        body: JSON.stringify({ action, motif }),
       })
       return response
     },
-    delete: async (id: number) => {
-      const response = await adminApiCall(`/admin/commentaires/${id}`, {
+    approve: async (id: number | string) => {
+      const response = await adminApiCall(`/commentaires/${id}/approve`, {
+        method: "PUT",
+      })
+      return response
+    },
+    reject: async (id: number | string, motif: string) => {
+      const response = await adminApiCall(`/commentaires/${id}/reject`, {
+        method: "PUT",
+        body: JSON.stringify({ motif }),
+      })
+      return response
+    },
+    delete: async (id: number | string) => {
+      const response = await adminApiCall(`/commentaires/${id}`, {
         method: "DELETE",
       })
       return response
+    },
+  },
+
+  // Analytics et statistiques
+  analytics: {
+    getStatistics: async (period: string = "30") => {
+      try {
+        console.log('📊 Admin API - Getting statistics...')
+        const response = await adminApiCall(`/analytics/statistics?period=${period}`)
+        console.log('✅ Admin API - Statistics response:', response)
+        return response.data || {}
+      } catch (error) {
+        console.error('❌ Admin API - Error getting statistics:', error)
+        return {}
+      }
+    },
+    getChartData: async (period: string = "30") => {
+      try {
+        console.log('📈 Admin API - Getting chart data...')
+        const response = await adminApiCall(`/analytics/charts?period=${period}`)
+        console.log('✅ Admin API - Chart data response:', response)
+        return response.data || {}
+      } catch (error) {
+        console.error('❌ Admin API - Error getting chart data:', error)
+        return {}
+      }
+    },
+    getActivityData: async (period: string = "30") => {
+      try {
+        console.log('📋 Admin API - Getting activity data...')
+        const response = await adminApiCall(`/analytics/activity?period=${period}`)
+        console.log('✅ Admin API - Activity data response:', response)
+        return response.data || {}
+      } catch (error) {
+        console.error('❌ Admin API - Error getting activity data:', error)
+        return {}
+      }
+    },
+    exportData: async (period: string = "30") => {
+      try {
+        const response = await adminApiCall(`/analytics/export?period=${period}`)
+        return response.data || ""
+      } catch (error) {
+        console.error('❌ Admin API - Error exporting data:', error)
+        throw error
+      }
     },
   },
 
@@ -324,5 +420,39 @@ export const adminApi = {
   unarchiveBook: async (id: string | number) => {
     // Simulation de désarchivage en changeant le statut
     return adminApi.books.update(typeof id === 'string' ? parseInt(id) : id, { statut: 'disponible' })
+  },
+
+  // Méthodes de compatibilité pour les commentaires
+  getComments: async () => {
+    return adminApi.comments.getAll()
+  },
+
+  approveComment: async (id: string | number) => {
+    return adminApi.comments.approve(id)
+  },
+
+  rejectComment: async (id: string | number, data: { motif: string }) => {
+    return adminApi.comments.reject(id, data.motif)
+  },
+
+  deleteComment: async (id: string | number) => {
+    return adminApi.comments.delete(id)
+  },
+
+  // Méthodes de compatibilité pour les analytics
+  getStatistics: async (period: string = "30") => {
+    return adminApi.analytics.getStatistics(period)
+  },
+
+  getChartData: async (period: string = "30") => {
+    return adminApi.analytics.getChartData(period)
+  },
+
+  getActivityData: async (period: string = "30") => {
+    return adminApi.analytics.getActivityData(period)
+  },
+
+  exportAnalytics: async (period: string = "30") => {
+    return adminApi.analytics.exportData(period)
   },
 }

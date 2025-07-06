@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useState, useMemo, useCallback } from "react"
 import { adminApi } from "@/lib/admin-api"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
+import { Checkbox } from "@/components/ui/checkbox"
+import { useToast } from "@/hooks/use-toast"
 import { 
   MessageSquare, 
   Search, 
@@ -20,7 +22,15 @@ import {
   CheckCircle,
   XCircle,
   RefreshCw,
-  BookOpen
+  BookOpen,
+  Filter,
+  Download,
+  ArrowUpDown,
+  MoreHorizontal,
+  Shield,
+  UserCheck,
+  Clock,
+  AlertCircle
 } from "lucide-react"
 import {
   Table,
@@ -45,6 +55,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu"
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs"
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert"
 
 interface Comment {
   id: string
@@ -69,6 +97,9 @@ interface Comment {
   date_moderation?: string
 }
 
+type SortField = 'date_creation' | 'note' | 'utilisateur' | 'livre' | 'statut'
+type SortOrder = 'asc' | 'desc'
+
 export default function AdminCommentsPage() {
   const [comments, setComments] = useState<Comment[]>([])
   const [loading, setLoading] = useState(true)
@@ -76,11 +107,18 @@ export default function AdminCommentsPage() {
   const [statusFilter, setStatusFilter] = useState("all")
   const [ratingFilter, setRatingFilter] = useState("all")
   const [selectedComment, setSelectedComment] = useState<Comment | null>(null)
+  const [selectedComments, setSelectedComments] = useState<string[]>([])
   const [isViewModalOpen, setIsViewModalOpen] = useState(false)
   const [isApproveModalOpen, setIsApproveModalOpen] = useState(false)
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [isBulkActionModalOpen, setIsBulkActionModalOpen] = useState(false)
+  const [bulkAction, setBulkAction] = useState<'approve' | 'reject' | 'delete' | null>(null)
   const [rejectReason, setRejectReason] = useState("")
+  const [sortField, setSortField] = useState<SortField>('date_creation')
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
+  const [currentTab, setCurrentTab] = useState("all")
+  const { toast } = useToast()
 
   useEffect(() => {
     fetchComments()
