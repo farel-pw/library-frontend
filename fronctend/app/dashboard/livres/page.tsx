@@ -111,8 +111,11 @@ export default function LivresPage() {
   const loadLivres = async () => {
     try {
       setLoading(true)
+      console.log("🔍 Chargement des livres...")
       const data = await api.getLivres()
+      console.log("📊 Données reçues:", data)
       const livresArray = Array.isArray(data) ? data : []
+      console.log("📚 Livres array:", livresArray)
       
       // Simulation de disponibilité selon la demande
       const livresAvecDisponibilite = livresArray.map((livre, index) => ({
@@ -122,10 +125,11 @@ export default function LivresPage() {
         nombre_notes: Math.floor(Math.random() * 50) + 1
       }))
       
+      console.log("✅ Livres avec disponibilité:", livresAvecDisponibilite)
       setLivres(livresAvecDisponibilite)
       setLivresFiltered(livresAvecDisponibilite)
     } catch (error) {
-      console.error("Erreur lors du chargement des livres:", error)
+      console.error("❌ Erreur lors du chargement des livres:", error)
       toast({
         title: "Erreur",
         description: "Impossible de charger les livres.",

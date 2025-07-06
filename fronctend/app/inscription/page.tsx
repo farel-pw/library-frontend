@@ -81,10 +81,12 @@ export default function InscriptionPage() {
     <div className="min-h-screen flex flex-col">
       <Navbar />
 
-      <main className="flex-1 bg-gray-50 py-12">
-        <div className="max-w-md mx-auto px-4">
+      <main className="flex-1 relative py-12 library-bg">
+        {/* Overlay pour améliorer la lisibilité */}
+        <div className="absolute inset-0 bg-black bg-opacity-50" />
+        <div className="max-w-md mx-auto px-4 relative z-10">
           <div className="mb-6">
-            <Link href="/" className="flex items-center text-blue-600 hover:text-blue-800">
+            <Link href="/" className="flex items-center text-white hover:text-blue-300">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Retour à l'accueil
             </Link>

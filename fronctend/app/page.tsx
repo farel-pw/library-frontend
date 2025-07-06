@@ -70,7 +70,7 @@ export default function HomePage() {
             <div className="text-white space-y-6">
               <h1 className="text-5xl font-bold leading-tight">
                 Bienvenue dans votre
-                <span className="text-blue-400 block">Bibliothèque Numérique</span>
+                <span className="text-blue-400 block">Bibliothèque Numérique 2IE </span>
               </h1>
               <p className="text-xl text-gray-200 leading-relaxed">
                 Découvrez, réservez et empruntez des milliers de livres en quelques clics. Votre savoir n'a plus de
