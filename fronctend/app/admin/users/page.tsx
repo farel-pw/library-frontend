@@ -226,13 +226,16 @@ export default function AdminUsersPage() {
     if (!selectedUser) return
     
     try {
-      await adminApi.users.update(parseInt(selectedUser.id), formData)
+      console.log("🔄 Updating user:", selectedUser.id, formData)
+      const result = await adminApi.users.update(parseInt(selectedUser.id), formData)
+      console.log("✅ Update result:", result)
+      
       setIsEditModalOpen(false)
       setSelectedUser(null)
       fetchUsers()
     } catch (error) {
-      console.error('Erreur lors de la mise à jour:', error)
-      alert('Erreur lors de la mise à jour de l\'utilisateur')
+      console.error('❌ Erreur lors de la mise à jour:', error)
+      alert('Erreur lors de la mise à jour de l\'utilisateur: ' + (error as Error).message)
     }
   }
 
@@ -240,37 +243,46 @@ export default function AdminUsersPage() {
     if (!selectedUser) return
     
     try {
-      await adminApi.users.delete(parseInt(selectedUser.id))
+      console.log("🗑️ Deleting user:", selectedUser.id)
+      const result = await adminApi.users.delete(parseInt(selectedUser.id))
+      console.log("✅ Delete result:", result)
+      
       setIsDeleteModalOpen(false)
       setSelectedUser(null)
       fetchUsers()
     } catch (error) {
-      console.error('Erreur lors de la suppression:', error)
-      alert('Erreur lors de la suppression de l\'utilisateur')
+      console.error('❌ Erreur lors de la suppression:', error)
+      alert('Erreur lors de la suppression de l\'utilisateur: ' + (error as Error).message)
     }
   }
 
   const handleSuspendUser = async (userId: string) => {
     try {
-      await adminApi.users.toggleStatus(parseInt(userId), false)
+      console.log("⏸️ Suspending user:", userId)
+      const result = await adminApi.users.toggleStatus(parseInt(userId), false)
+      console.log("✅ Suspend result:", result)
+      
       fetchUsers()
       setIsStatusModalOpen(false)
       setSelectedUser(null)
     } catch (error) {
-      console.error('Erreur lors de la suspension:', error)
-      alert('Erreur lors de la suspension de l\'utilisateur')
+      console.error('❌ Erreur lors de la suspension:', error)
+      alert('Erreur lors de la suspension de l\'utilisateur: ' + (error as Error).message)
     }
   }
 
   const handleActivateUser = async (userId: string) => {
     try {
-      await adminApi.users.toggleStatus(parseInt(userId), true)
+      console.log("▶️ Activating user:", userId)
+      const result = await adminApi.users.toggleStatus(parseInt(userId), true)
+      console.log("✅ Activate result:", result)
+      
       fetchUsers()
       setIsStatusModalOpen(false)
       setSelectedUser(null)
     } catch (error) {
-      console.error('Erreur lors de l\'activation:', error)
-      alert('Erreur lors de l\'activation de l\'utilisateur')
+      console.error('❌ Erreur lors de l\'activation:', error)
+      alert('Erreur lors de l\'activation de l\'utilisateur: ' + (error as Error).message)
     }
   }
 

@@ -2,9 +2,6 @@ import { getApiUrl } from "./api-config"
 
 export async function adminApiCall(endpoint: string, options: RequestInit = {}) {
   const token = localStorage.getItem("adminToken") || localStorage.getItem("token")
-  
-  console.log("🔐 Admin API Call:", endpoint)
-  console.log("🔐 Token found:", token ? "✅ Yes" : "❌ No")
 
   const config: RequestInit = {
     ...options,
@@ -15,12 +12,7 @@ export async function adminApiCall(endpoint: string, options: RequestInit = {}) 
     },
   }
 
-  console.log("📤 Request config:", config)
-
   const response = await fetch(getApiUrl(endpoint), config)
-  
-  console.log("📥 Response status:", response.status)
-  console.log("📥 Response ok:", response.ok)
 
   if (!response.ok) {
     const errorText = await response.text()
@@ -29,7 +21,6 @@ export async function adminApiCall(endpoint: string, options: RequestInit = {}) 
   }
 
   const data = await response.json()
-  console.log("📊 Response data:", data)
   
   if (data.error) {
     console.error("❌ API Error from data:", data.message)
@@ -85,7 +76,7 @@ export const adminApi = {
       return response
     },
     toggleStatus: async (id: number, active: boolean) => {
-      const response = await adminApiCall(`/admin/utilisateurs/${id}/status`, {
+      const response = await adminApiCall(`/utilisateurs/${id}/status`, {
         method: "PUT",
         body: JSON.stringify({ active }),
       })
