@@ -29,7 +29,7 @@ export default function ConnexionPage() {
     if (user && !loading) {
       // Redirection basée sur le rôle utilisateur
       if (user.role === "admin") {
-        router.push("/dashboard/admin/livres")
+        router.push("/admin/dashboard")
       } else {
         router.push("/dashboard") // Redirection vers la page d'accueil du dashboard
       }

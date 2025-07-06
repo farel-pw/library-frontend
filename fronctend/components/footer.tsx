@@ -87,6 +87,9 @@ export function Footer() {
               <a href="#" className="text-blue-200 hover:text-white text-sm transition-colors">
                 Aide
               </a>
+              <a href="/admin/connexion" className="text-blue-300 hover:text-blue-100 text-xs transition-colors opacity-70">
+                Administration
+              </a>
             </div>
           </div>
         </div>
