@@ -87,37 +87,38 @@ export const adminApi = {
   // Gestion des livres
   books: {
     getAll: async () => {
-      const response = await adminApiCall("/admin/livres")
-      return response.data || []
+      const response = await adminApiCall("/livres")
+      console.log("📚 Books API Response:", response)
+      
+      // Le backend retourne { error: false, data: books }
+      if (response.error === false && response.data) {
+        return response.data
+      }
+      
+      // Fallback si la structure est différente
+      return response.data || response || []
     },
     getById: async (id: number) => {
-      const response = await adminApiCall(`/admin/livres/${id}`)
-      return response.data
+      const response = await adminApiCall(`/livres/${id}`)
+      return response.data || response
     },
     create: async (bookData: any) => {
-      const response = await adminApiCall("/admin/livres", {
+      const response = await adminApiCall("/livres", {
         method: "POST",
         body: JSON.stringify(bookData),
       })
       return response
     },
     update: async (id: number, bookData: any) => {
-      const response = await adminApiCall(`/admin/livres/${id}`, {
+      const response = await adminApiCall(`/livres/${id}`, {
         method: "PUT",
         body: JSON.stringify(bookData),
       })
       return response
     },
     delete: async (id: number) => {
-      const response = await adminApiCall(`/admin/livres/${id}`, {
+      const response = await adminApiCall(`/livres/${id}`, {
         method: "DELETE",
-      })
-      return response
-    },
-    toggleAvailability: async (id: number, disponible: boolean) => {
-      const response = await adminApiCall(`/admin/livres/${id}/availability`, {
-        method: "PUT",
-        body: JSON.stringify({ disponible }),
       })
       return response
     },
@@ -126,30 +127,52 @@ export const adminApi = {
   // Gestion des emprunts
   borrows: {
     getAll: async () => {
-      const response = await adminApiCall("/admin/emprunts")
-      return response.data || []
+      try {
+        console.log('Admin API - Getting all borrows...')
+        const response = await adminApiCall("/emprunts/details")
+        console.log('Admin API - Borrows response:', response)
+        return response.data || []
+      } catch (error) {
+        console.error('Admin API - Error getting borrows:', error)
+        // Fallback vers l'endpoint /all si /details ne fonctionne pas
+        try {
+          const response = await adminApiCall("/emprunts/all")
+          return response.data || []
+        } catch (fallbackError) {
+          console.error('Admin API - Fallback error:', fallbackError)
+          return []
+        }
+      }
     },
-    getById: async (id: number) => {
-      const response = await adminApiCall(`/admin/emprunts/${id}`)
+    getById: async (id: number | string) => {
+      const response = await adminApiCall(`/emprunts/${id}`)
       return response.data
     },
     create: async (borrowData: any) => {
-      const response = await adminApiCall("/admin/emprunts", {
+      const response = await adminApiCall("/emprunts", {
         method: "POST",
         body: JSON.stringify(borrowData),
       })
       return response
     },
-    returnBook: async (id: number) => {
-      const response = await adminApiCall(`/admin/emprunts/${id}/return`, {
+    returnBook: async (id: number | string, data?: any) => {
+      const response = await adminApiCall(`/emprunts/${id}/return`, {
         method: "PUT",
+        body: data ? JSON.stringify(data) : undefined,
       })
       return response
     },
-    extend: async (id: number, newDate: string) => {
-      const response = await adminApiCall(`/admin/emprunts/${id}/extend`, {
+    extend: async (id: number | string, newDate: string) => {
+      const response = await adminApiCall(`/emprunts/${id}/extend`, {
         method: "PUT",
         body: JSON.stringify({ newDate }),
+      })
+      return response
+    },
+    update: async (id: number | string, borrowData: any) => {
+      const response = await adminApiCall(`/emprunts/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(borrowData),
       })
       return response
     },
@@ -256,5 +279,50 @@ export const adminApi = {
       })
       return response
     },
+  },
+
+  // Méthodes de compatibilité pour l'ancien format
+  getBooks: async () => {
+    return adminApi.books.getAll()
+  },
+
+  getBorrows: async () => {
+    return adminApi.borrows.getAll()
+  },
+
+  returnBorrow: async (id: number | string, data?: any) => {
+    return adminApi.borrows.returnBook(id, data)
+  },
+
+  renewBorrow: async (id: number | string, data?: any) => {
+    if (data?.days) {
+      // Calculer la nouvelle date basée sur le nombre de jours
+      const newDate = new Date()
+      newDate.setDate(newDate.getDate() + data.days)
+      return adminApi.borrows.extend(id, newDate.toISOString())
+    }
+    return adminApi.borrows.extend(id, data?.newDate || new Date().toISOString())
+  },
+
+  createBook: async (bookData: any) => {
+    return adminApi.books.create(bookData)
+  },
+
+  updateBook: async (id: string | number, bookData: any) => {
+    return adminApi.books.update(typeof id === 'string' ? parseInt(id) : id, bookData)
+  },
+
+  deleteBook: async (id: string | number) => {
+    return adminApi.books.delete(typeof id === 'string' ? parseInt(id) : id)
+  },
+
+  archiveBook: async (id: string | number) => {
+    // Simulation d'archivage en changeant le statut
+    return adminApi.books.update(typeof id === 'string' ? parseInt(id) : id, { statut: 'archive' })
+  },
+
+  unarchiveBook: async (id: string | number) => {
+    // Simulation de désarchivage en changeant le statut
+    return adminApi.books.update(typeof id === 'string' ? parseInt(id) : id, { statut: 'disponible' })
   },
 }
