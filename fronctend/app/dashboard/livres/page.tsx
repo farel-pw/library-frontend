@@ -72,6 +72,7 @@ export default function LivresPage() {
   const [livresFiltered, setLivresFiltered] = useState<Livre[]>([])
   const [loading, setLoading] = useState(true)
   const [empruntEnCours, setEmpruntEnCours] = useState<number | null>(null)
+  const [reservationEnCours, setReservationEnCours] = useState<number | null>(null)
   const [filters, setFilters] = useState({
     titre: "",
     auteur: "",
@@ -138,33 +139,40 @@ export default function LivresPage() {
     setLivresFiltered(filtered)
   }
 
-  const reserverLivre = async (livreId: number) => {
-    if (!user) {
-      toast({ title: "Erreur", description: "Vous devez être connecté.", variant: "destructive" })
-      return
-    }
-    try {
-      const res = await fetch("http://localhost:4001/reservations/reserver", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ utilisateur_id: user.id, livre_id: livreId }),
-      })
-      if (res.ok) {
-        toast({ title: "Réservation réussie", description: "Le livre a été réservé." })
-      } else {
-        toast({ title: "Erreur", description: "Impossible de réserver ce livre.", variant: "destructive" })
-      }
-    } catch (error) {
-      console.error("Erreur lors de la réservation:", error)
-      toast({ title: "Erreur", description: "Impossible de réserver ce livre.", variant: "destructive" })
-    }
-  }
-
   const handleFilterChange = (key: string, value: string) => {
     setFilters((prev) => ({
       ...prev,
       [key]: value,
     }))
+  }
+
+  const reserverLivre = async (livreId: number) => {
+    if (!user) {
+      toast({ 
+        title: "Erreur", 
+        description: "Vous devez être connecté pour réserver un livre.", 
+        variant: "destructive" 
+      })
+      return
+    }
+    
+    try {
+      setReservationEnCours(livreId)
+      await api.reserverLivre(livreId)
+      toast({ 
+        title: "Succès", 
+        description: "Livre réservé avec succès! Vous serez notifié quand il sera disponible." 
+      })
+    } catch (error) {
+      console.error("Erreur lors de la réservation:", error)
+      toast({
+        title: "Erreur",
+        description: "Impossible de réserver ce livre. Veuillez réessayer.",
+        variant: "destructive",
+      })
+    } finally {
+      setReservationEnCours(null)
+    }
   }
 
   if (loading) {
@@ -259,14 +267,19 @@ export default function LivresPage() {
                   (e.target as HTMLImageElement).src = "/placeholder.jpg"
                 }}
               />
-              {!livre.disponible && (
-                <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                  <Badge variant="destructive">Non disponible</Badge>
-                </div>
-              )}
             </div>
             <CardContent className="p-4">
-              <h3 className="font-semibold text-lg mb-2 line-clamp-2">{livre.titre}</h3>
+              {/* Badge de disponibilité */}
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="font-semibold text-lg line-clamp-2 flex-1">{livre.titre}</h3>
+                <Badge 
+                  variant={livre.disponible ? "default" : "secondary"}
+                  className={livre.disponible ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}
+                >
+                  {livre.disponible ? "Disponible" : "Indisponible"}
+                </Badge>
+              </div>
+              
               <div className="space-y-2 text-sm text-gray-600 mb-4">
                 <div className="flex items-center">
                   <User className="h-4 w-4 mr-2" />
@@ -282,41 +295,54 @@ export default function LivresPage() {
                 </div>
               </div>
               {livre.description && <p className="text-sm text-gray-600 mb-4 line-clamp-3">{livre.description}</p>}
-              <Button 
-                onClick={async () => {
-                  if (!user) {
-                    toast({ 
-                      title: "Erreur", 
-                      description: "Vous devez être connecté pour emprunter un livre.", 
-                      variant: "destructive" 
-                    })
-                    return
-                  }
-                  
-                  try {
-                    setEmpruntEnCours(livre.id)
-                    await api.emprunterLivre(livre.id)
-                    toast({ 
-                      title: "Succès", 
-                      description: "Livre emprunté avec succès!" 
-                    })
-                    loadLivres() // Recharger la liste pour mettre à jour la disponibilité
-                  } catch (error) {
-                    console.error("Erreur lors de l'emprunt:", error)
-                    toast({
-                      title: "Erreur",
-                      description: "Impossible d'emprunter ce livre. Veuillez réessayer.",
-                      variant: "destructive",
-                    })
-                  } finally {
-                    setEmpruntEnCours(null)
-                  }
-                }} 
-                disabled={!livre.disponible || empruntEnCours === livre.id} 
-                className="w-full"
-              >
-                {empruntEnCours === livre.id ? "Emprunt en cours..." : (livre.disponible ? "Emprunter" : "Non disponible")}
-              </Button>
+              
+              {/* Boutons conditionnels */}
+              {livre.disponible ? (
+                <Button 
+                  onClick={async () => {
+                    if (!user) {
+                      toast({ 
+                        title: "Erreur", 
+                        description: "Vous devez être connecté pour emprunter un livre.", 
+                        variant: "destructive" 
+                      })
+                      return
+                    }
+                    
+                    try {
+                      setEmpruntEnCours(livre.id)
+                      await api.emprunterLivre(livre.id)
+                      toast({ 
+                        title: "Succès", 
+                        description: "Livre emprunté avec succès!" 
+                      })
+                      loadLivres() // Recharger la liste pour mettre à jour la disponibilité
+                    } catch (error) {
+                      console.error("Erreur lors de l'emprunt:", error)
+                      toast({
+                        title: "Erreur",
+                        description: "Impossible d'emprunter ce livre. Veuillez réessayer.",
+                        variant: "destructive",
+                      })
+                    } finally {
+                      setEmpruntEnCours(null)
+                    }
+                  }} 
+                  disabled={empruntEnCours === livre.id} 
+                  className="w-full bg-green-600 hover:bg-green-700"
+                >
+                  {empruntEnCours === livre.id ? "Emprunt en cours..." : "Emprunter"}
+                </Button>
+              ) : (
+                <Button 
+                  onClick={() => reserverLivre(livre.id)}
+                  disabled={reservationEnCours === livre.id}
+                  variant="outline"
+                  className="w-full border-blue-600 text-blue-600 hover:bg-blue-50"
+                >
+                  {reservationEnCours === livre.id ? "Réservation en cours..." : "Réserver"}
+                </Button>
+              )}
             </CardContent>
           </Card>
         ))}

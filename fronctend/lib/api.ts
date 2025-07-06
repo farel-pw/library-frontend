@@ -59,6 +59,25 @@ export const api = {
     return response
   },
 
+  // Réservations
+  getReservations: async () => {
+    const response = await apiCall("/reservations")
+    return response.data || []
+  },
+  reserverLivre: async (livreId: number) => {
+    const response = await apiCall("/reservations", {
+      method: "POST",
+      body: JSON.stringify({ livre_id: livreId }),
+    })
+    return response
+  },
+  annulerReservation: async (reservationId: number) => {
+    const response = await apiCall(`/reservations/${reservationId}`, {
+      method: "DELETE",
+    })
+    return response
+  },
+
   // Admin - Livres
   admin: {
     getLivres: async () => {
