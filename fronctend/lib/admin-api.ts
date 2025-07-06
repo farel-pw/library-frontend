@@ -314,24 +314,44 @@ export const adminApi = {
         const rawData = response.data || {}
         const transformedData = {
           utilisateurs: {
+            total: rawData.total_utilisateurs || 0,
             actifs: rawData.utilisateurs_actifs || rawData.total_utilisateurs || 0,
             nouveaux_ce_mois: rawData.nouveaux_utilisateurs || 0,
             tendance_utilisateurs: 0 // Calculé côté frontend
           },
+          livres: {
+            total: rawData.total_livres || 0,
+            disponibles: rawData.livres_disponibles || 0,
+            empruntes: rawData.emprunts_actifs || 0,
+            reserves: rawData.reservations_en_attente || 0,
+            tendance_emprunts: 0
+          },
           emprunts: {
+            total: rawData.total_emprunts || 0,
             en_cours: rawData.emprunts_actifs || 0,
             en_retard: rawData.emprunts_en_retard || 0,
+            rendus_ce_mois: 0, // À calculer si nécessaire
             tendance_retards: 0 // Calculé côté frontend
           },
           reservations: {
+            total: rawData.total_reservations || 0,
             en_attente: rawData.reservations_en_attente || 0,
             pretes: rawData.reservations_pretes || 0,
+            expirees: 0, // À calculer si nécessaire
             tendance_reservations: 0 // Calculé côté frontend
           },
           commentaires: {
             total: rawData.total_commentaires || 0,
+            en_attente: 0, // À ajouter au backend si nécessaire
+            approuves: 0, // À ajouter au backend si nécessaire
             note_moyenne: rawData.note_moyenne_generale || 0,
             tendance_avis: 0 // Calculé côté frontend
+          },
+          notifications: {
+            total: rawData.total_notifications || 0,
+            non_lues: rawData.notifications_non_lues || 0,
+            retards: rawData.notifications_retard || 0,
+            reservations: rawData.notifications_reservations || 0
           }
         }
         
@@ -499,5 +519,74 @@ export const adminApi = {
 
   exportAnalytics: async (period: string = "30") => {
     return adminApi.analytics.exportData(period)
+  },
+
+  // Gestion des notifications
+  notifications: {
+    getAll: async (limit: number = 100) => {
+      try {
+        console.log('🔔 Admin API - Getting all notifications...')
+        const response = await adminApiCall(`/notifications/all?limit=${limit}`)
+        console.log('✅ Admin API - Notifications response:', response)
+        return response.data || []
+      } catch (error) {
+        console.error('❌ Admin API - Error getting notifications:', error)
+        return []
+      }
+    },
+    getStats: async () => {
+      try {
+        console.log('📊 Admin API - Getting notification stats...')
+        const response = await adminApiCall('/notifications/stats')
+        console.log('✅ Admin API - Notification stats response:', response)
+        return response.data || {}
+      } catch (error) {
+        console.error('❌ Admin API - Error getting notification stats:', error)
+        return {}
+      }
+    },
+    checkOverdue: async () => {
+      try {
+        console.log('🚨 Admin API - Checking overdue books...')
+        const response = await adminApiCall('/notifications/check-overdue', {
+          method: 'POST'
+        })
+        console.log('✅ Admin API - Check overdue response:', response)
+        return response
+      } catch (error) {
+        console.error('❌ Admin API - Error checking overdue books:', error)
+        return { error: true, message: 'Erreur lors de la vérification des retards' }
+      }
+    },
+    testEmail: async () => {
+      try {
+        console.log('📧 Admin API - Testing email configuration...')
+        const response = await adminApiCall('/notifications/test-email', {
+          method: 'POST'
+        })
+        console.log('✅ Admin API - Email test response:', response)
+        return response
+      } catch (error) {
+        console.error('❌ Admin API - Error testing email:', error)
+        return { error: true, message: 'Erreur lors du test email' }
+      }
+    }
+  },
+
+  // Méthodes de compatibilité pour les notifications
+  getNotifications: async (limit: number = 100) => {
+    return adminApi.notifications.getAll(limit)
+  },
+
+  getNotificationStats: async () => {
+    return adminApi.notifications.getStats()
+  },
+
+  checkOverdueBooks: async () => {
+    return adminApi.notifications.checkOverdue()
+  },
+
+  testEmailConfig: async () => {
+    return adminApi.notifications.testEmail()
   },
 }
