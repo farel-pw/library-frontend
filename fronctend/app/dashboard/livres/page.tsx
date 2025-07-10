@@ -24,6 +24,10 @@ interface Livre {
   image_url: string
   description: string
   disponible: boolean
+  exemplaires_total: number
+  exemplaires_disponibles: number
+  emprunts_actifs?: number
+  statut: string
   note_moyenne?: number
   nombre_notes?: number
 }
@@ -77,6 +81,77 @@ const getImageForBook = (titre: string, auteur: string, genre: string): string =
       return "/images/Litte.png"
     default:
       return "/placeholder.jpg"
+  }
+}
+
+
+
+// Fonction pour déterminer si le bouton d'emprunt doit être activé
+const canBorrow = (livre: Livre) => {
+  return livre.exemplaires_disponibles > 0
+}
+
+// Fonction pour déterminer le type de bouton à afficher
+const getBookActionButton = (livre: Livre) => {
+  const available = livre.exemplaires_disponibles || 0
+  const reservationsActives = livre.reservations_actives || 0
+  
+  if (available > 0) {
+    return {
+      type: 'borrow',
+      text: `Emprunter (${available} dispo)`,
+      variant: 'default',
+      className: 'w-full bg-green-600 hover:bg-green-700'
+    }
+  } else {
+    return {
+      type: 'reserve',
+      text: reservationsActives > 0 ? `Réserver (${reservationsActives} en attente)` : 'Réserver',
+      variant: 'outline',
+      className: 'w-full border-blue-600 text-blue-600 hover:bg-blue-50'
+    }
+  }
+}
+
+// Fonction pour obtenir le badge de disponibilité amélioré
+const getAvailabilityBadge = (livre: Livre) => {
+  const available = livre.exemplaires_disponibles || 0
+  const total = livre.exemplaires_total || 3
+  const returned = livre.emprunts_retournes || 0
+  
+  if (available === 0) {
+    return (
+      <div className="space-y-1">
+        <Badge variant="destructive">Tous empruntés ({total}/{total})</Badge>
+        {returned > 0 && (
+          <Badge variant="secondary" className="bg-gray-100 text-gray-600">
+            {returned} retour(s) effectué(s)
+          </Badge>
+        )}
+      </div>
+    )
+  } else if (available === 1) {
+    return (
+      <div className="space-y-1">
+        <Badge className="bg-orange-100 text-orange-800">Dernier exemplaire ({available}/{total})</Badge>
+        {returned > 0 && (
+          <Badge variant="secondary" className="bg-gray-100 text-gray-600">
+            {returned} retour(s) effectué(s)
+          </Badge>
+        )}
+      </div>
+    )
+  } else {
+    return (
+      <div className="space-y-1">
+        <Badge className="bg-green-100 text-green-800">Disponible ({available}/{total})</Badge>
+        {returned > 0 && (
+          <Badge variant="secondary" className="bg-gray-100 text-gray-600">
+            {returned} retour(s) effectué(s)
+          </Badge>
+        )}
+      </div>
+    )
   }
 }
 
@@ -245,11 +320,20 @@ export default function LivresPage() {
     }
 
     try {
-      await api.ajouterCommentaire({
+      const response = await api.ajouterCommentaire({
         livre_id: livreId,
         commentaire: nouveauCommentaire,
         note: nouvelleNote
       })
+      
+      if (response.error) {
+        toast({
+          title: "Erreur",
+          description: response.message || "Impossible d'ajouter le commentaire.",
+          variant: "destructive",
+        })
+        return
+      }
       
       toast({
         title: "Succès",
@@ -263,6 +347,18 @@ export default function LivresPage() {
       loadLivres() // Recharger pour mettre à jour la note moyenne
     } catch (error) {
       console.error("Erreur lors de l'ajout du commentaire:", error)
+      
+      // Gestion spécifique pour les erreurs d'authentification
+      if (error.message?.includes("401") || error.message?.includes("Session expirée")) {
+        toast({
+          title: "Session expirée",
+          description: "Veuillez vous reconnecter.",
+          variant: "destructive",
+        })
+        // Redirection gérée par apiCall
+        return
+      }
+      
       toast({
         title: "Erreur",
         description: "Impossible d'ajouter le commentaire.",
@@ -395,12 +491,7 @@ export default function LivresPage() {
               {/* Badge de disponibilité */}
               <div className="flex justify-between items-start mb-2">
                 <h3 className="font-semibold text-lg line-clamp-2 flex-1">{livre.titre}</h3>
-                <Badge 
-                  variant={livre.disponible ? "default" : "secondary"}
-                  className={livre.disponible ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}
-                >
-                  {livre.disponible ? "Disponible" : "Indisponible"}
-                </Badge>
+                {getAvailabilityBadge(livre)}
               </div>
               
               <div className="space-y-2 text-sm text-gray-600 mb-4">
@@ -503,52 +594,60 @@ export default function LivresPage() {
               </div>
               
               {/* Boutons conditionnels */}
-              {livre.disponible ? (
-                <Button 
-                  onClick={async () => {
-                    if (!user) {
-                      toast({ 
-                        title: "Erreur", 
-                        description: "Vous devez être connecté pour emprunter un livre.", 
-                        variant: "destructive" 
-                      })
-                      return
-                    }
-                    
-                    try {
-                      setEmpruntEnCours(livre.id)
-                      await api.emprunterLivre(livre.id)
-                      toast({ 
-                        title: "Succès", 
-                        description: "Livre emprunté avec succès!" 
-                      })
-                      loadLivres() // Recharger la liste pour mettre à jour la disponibilité
-                    } catch (error) {
-                      console.error("Erreur lors de l'emprunt:", error)
-                      toast({
-                        title: "Erreur",
-                        description: "Impossible d'emprunter ce livre. Veuillez réessayer.",
-                        variant: "destructive",
-                      })
-                    } finally {
-                      setEmpruntEnCours(null)
-                    }
-                  }} 
-                  disabled={empruntEnCours === livre.id} 
-                  className="w-full bg-green-600 hover:bg-green-700"
-                >
-                  {empruntEnCours === livre.id ? "Emprunt en cours..." : "Emprunter"}
-                </Button>
-              ) : (
-                <Button 
-                  onClick={() => reserverLivre(livre.id)}
-                  disabled={reservationEnCours === livre.id}
-                  variant="outline"
-                  className="w-full border-blue-600 text-blue-600 hover:bg-blue-50"
-                >
-                  {reservationEnCours === livre.id ? "Réservation en cours..." : "Réserver"}
-                </Button>
-              )}
+              {(() => {
+                const actionButton = getBookActionButton(livre)
+                
+                if (actionButton.type === 'borrow') {
+                  return (
+                    <Button 
+                      onClick={async () => {
+                        if (!user) {
+                          toast({ 
+                            title: "Erreur", 
+                            description: "Vous devez être connecté pour emprunter un livre.", 
+                            variant: "destructive" 
+                          })
+                          return
+                        }
+                        
+                        try {
+                          setEmpruntEnCours(livre.id)
+                          await api.emprunterLivre(livre.id)
+                          toast({ 
+                            title: "Succès", 
+                            description: "Livre emprunté avec succès!" 
+                          })
+                          loadLivres() // Recharger la liste pour mettre à jour la disponibilité
+                        } catch (error) {
+                          console.error("Erreur lors de l'emprunt:", error)
+                          toast({
+                            title: "Erreur",
+                            description: "Impossible d'emprunter ce livre. Veuillez réessayer.",
+                            variant: "destructive",
+                          })
+                        } finally {
+                          setEmpruntEnCours(null)
+                        }
+                      }} 
+                      disabled={empruntEnCours === livre.id} 
+                      className={actionButton.className}
+                    >
+                      {empruntEnCours === livre.id ? "Emprunt en cours..." : actionButton.text}
+                    </Button>
+                  )
+                } else {
+                  return (
+                    <Button 
+                      onClick={() => reserverLivre(livre.id)}
+                      disabled={reservationEnCours === livre.id}
+                      variant={actionButton.variant}
+                      className={actionButton.className}
+                    >
+                      {reservationEnCours === livre.id ? "Réservation en cours..." : actionButton.text}
+                    </Button>
+                  )
+                }
+              })()} 
             </CardContent>
           </Card>
         ))}

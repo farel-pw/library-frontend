@@ -83,10 +83,19 @@ export default function AvisPage() {
 
     try {
       setEnvoiEnCours(true)
-      await api.ajouterBibliothequeCommentaire({
+      const response = await api.ajouterBibliothequeCommentaire({
         commentaire: nouveauCommentaire,
         note: nouvelleNote
       })
+      
+      if (response.error) {
+        toast({
+          title: "Erreur",
+          description: response.message || "Impossible d'ajouter votre avis.",
+          variant: "destructive",
+        })
+        return
+      }
       
       toast({
         title: "Succès",
@@ -98,6 +107,18 @@ export default function AvisPage() {
       loadData()
     } catch (error) {
       console.error("Erreur lors de l'ajout de l'avis:", error)
+      
+      // Gestion spécifique pour les erreurs d'authentification
+      if (error.message?.includes("401") || error.message?.includes("Session expirée")) {
+        toast({
+          title: "Session expirée",
+          description: "Veuillez vous reconnecter.",
+          variant: "destructive",
+        })
+        // Redirection gérée par apiCall
+        return
+      }
+      
       toast({
         title: "Erreur",
         description: "Impossible d'ajouter votre avis.",

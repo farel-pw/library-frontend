@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, BookOpen, Clock, CheckCircle, AlertCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 
 // Fonction pour associer les livres aux images disponibles
 const getImageForBook = (titre: string, auteur: string): string => {
@@ -49,6 +50,8 @@ export default function EmpruntsPage() {
   const [emprunts, setEmprunts] = useState<Emprunt[]>([])
   const [loading, setLoading] = useState(true)
   const [retourEnCours, setRetourEnCours] = useState<number | null>(null)
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [empruntAConfirmer, setEmpruntAConfirmer] = useState<Emprunt | null>(null)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -77,9 +80,11 @@ export default function EmpruntsPage() {
       await api.retournerLivre(empruntId)
       toast({
         title: "Retour réussi",
-        description: "Le livre a été retourné avec succès.",
+        description: "Le livre a été retourné avec succès. Un exemplaire est maintenant disponible.",
       })
       loadEmprunts() // Recharger la liste
+      setDialogOpen(false)
+      setEmpruntAConfirmer(null)
     } catch (error) {
       console.error("Erreur lors du retour:", error)
       toast({
@@ -90,6 +95,23 @@ export default function EmpruntsPage() {
     } finally {
       setRetourEnCours(null)
     }
+  }
+
+  const ouvrirConfirmationRetour = (emprunt: Emprunt) => {
+    setEmpruntAConfirmer(emprunt)
+    setDialogOpen(true)
+  }
+
+  const handleRetournerLivre = (emprunt: Emprunt) => {
+    setEmpruntAConfirmer(emprunt)
+    setDialogOpen(true)
+  }
+
+  const confirmerRetour = () => {
+    if (empruntAConfirmer) {
+      retournerLivre(empruntAConfirmer.id)
+    }
+    setDialogOpen(false)
   }
 
   const getStatutBadge = (emprunt: Emprunt) => {
@@ -280,7 +302,7 @@ export default function EmpruntsPage() {
 
                   {!emprunt.rendu && (
                     <Button 
-                      onClick={() => retournerLivre(emprunt.id)} 
+                      onClick={() => handleRetournerLivre(emprunt)} 
                       variant="outline"
                       disabled={retourEnCours === emprunt.id}
                     >
@@ -301,6 +323,41 @@ export default function EmpruntsPage() {
           <p className="text-gray-600">Vous n'avez pas encore emprunté de livres.</p>
         </div>
       )}
+
+      {/* Dialogue de confirmation */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmer le retour</DialogTitle>
+            <DialogDescription>
+              {empruntAConfirmer && (
+                <div className="space-y-2 mt-2">
+                  <p>Êtes-vous sûr de vouloir retourner ce livre ?</p>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p className="font-medium">{empruntAConfirmer.titre}</p>
+                    <p className="text-sm text-gray-600">par {empruntAConfirmer.auteur}</p>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    Une fois retourné, un exemplaire sera de nouveau disponible pour d'autres utilisateurs.
+                  </p>
+                </div>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button 
+              onClick={confirmerRetour} 
+              disabled={retourEnCours !== null}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {retourEnCours !== null ? "Retour en cours..." : "Confirmer le retour"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

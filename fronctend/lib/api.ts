@@ -14,17 +14,23 @@ export async function apiCall(endpoint: string, options: RequestInit = {}) {
 
   const response = await fetch(getApiUrl(endpoint), config)
 
+  // Gestion spéciale pour les erreurs d'authentification
+  if (response.status === 401) {
+    // Token expiré ou invalide, rediriger vers la connexion
+    localStorage.removeItem("token")
+    localStorage.removeItem("user")
+    window.location.href = "/connexion"
+    throw new Error("Session expirée. Veuillez vous reconnecter.")
+  }
+
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`)
   }
 
   const data = await response.json()
   
-  // Gestion moderne des erreurs du backend
-  if (data.error) {
-    throw new Error(data.message || "Erreur du serveur")
-  }
-
+  // Retourner les données telles quelles, y compris les erreurs
+  // Le composant gérera les erreurs lui-même
   return data
 }
 
